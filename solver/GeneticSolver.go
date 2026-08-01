@@ -3,6 +3,7 @@ package solver
 import (
 	"fmt"
 	"sort"
+	"sync"
 
 	"github.com/james-vaughn/PicrossSolver/picross"
 )
@@ -10,6 +11,7 @@ import (
 type SolverConfig struct {
 	GenerationSize  int
 	GenerationCount int
+	MutationRate    float64
 }
 
 type Individual struct {
@@ -21,22 +23,12 @@ func SolvePicross(p *picross.Picross, config SolverConfig) {
 	// Implement the genetic algorithm to solve the Picross puzzle
 	// This is a placeholder for the actual implementation
 
-	// Create gen 0
-	// Evaluate fitness
-	// Select parents
-	// Crossover
-	// Mutate
-	// Repeat until solution is found or max generations reached
+	population := createInitialPopulation(p, config.GenerationSize)
 
-	parents := make([]Individual, config.GenerationSize)
-
-	for i := 0; i < config.GenerationSize; i++ {
-		parent := picross.RandomPicross(p.Width, p.Height)
-		score := Score(parent, p)
-		parents[i] = Individual{Genome: parent, Fitness: score}
+	for gen := 0; gen < config.GenerationCount; gen++ {
+		fmt.Printf("Generation %d\n", gen)
 	}
-
-	sorted := sortIndividualsByFitness(parents)
+	sorted := sortIndividualsByFitness(population)
 	for _, puzzle := range sorted {
 		fmt.Println(puzzle.Fitness, puzzle.Genome)
 	}
@@ -105,4 +97,24 @@ func sortIndividualsByFitness(individuals []Individual) []Individual {
 		return individuals[i].Fitness < individuals[j].Fitness
 	})
 	return individuals
+}
+
+func createInitialPopulation(p *picross.Picross, size int) []Individual {
+	parents := make([]Individual, size)
+
+	wg := sync.WaitGroup{}
+	ch := make(chan Individual, size)
+	for i := 0; i < size; i++ {
+		wg.Go(func() {
+			parent := picross.RandomPicross(p.Width, p.Height)
+			score := Score(parent, p)
+			ch <- Individual{Genome: parent, Fitness: score}
+		})
+	}
+	wg.Wait()
+	close(ch)
+	for i := 0; i < size; i++ {
+		parents[i] = <-ch
+	}
+	return parents
 }

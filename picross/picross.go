@@ -121,24 +121,26 @@ func validateDim(row []bool, key []int) bool {
 func RandomPicross(width, height int) *Picross {
 	p := NewPicross(width, height)
 	// Fill the grid with random true/false values
-	for i := 0; i < height; i++ {
-		for j := 0; j < width; j++ {
+	for i := range height {
+		for j := range width {
 			p.Grid[i][j] = rand.Intn(2) == 1
 		}
 	}
 
-	// Generate keys for the random grid
-	for i := 0; i < height; i++ {
+	generateKeys(p)
+	return p
+}
+func generateKeys(p *Picross) {
+	for i := 0; i < p.Height; i++ {
 		p.KeyDown[i] = generateKey(p.Grid[i])
 	}
-	for j := 0; j < width; j++ {
-		column := make([]bool, height)
-		for i := 0; i < height; i++ {
+	for j := 0; j < p.Width; j++ {
+		column := make([]bool, p.Height)
+		for i := 0; i < p.Height; i++ {
 			column[i] = p.Grid[i][j]
 		}
 		p.KeyAcross[j] = generateKey(column)
 	}
-	return p
 }
 
 func generateKey(row []bool) []int {
