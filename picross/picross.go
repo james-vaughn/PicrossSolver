@@ -1,5 +1,10 @@
 package picross
 
+import (
+	"fmt"
+	"math/rand"
+)
+
 type Picross struct {
 	Width     int
 	Height    int
@@ -24,6 +29,19 @@ func NewPicross(width, height int) *Picross {
 
 func (p Picross) String() string {
 	result := ""
+
+	result += "Keys Across: "
+	for _, key := range p.KeyAcross {
+		result += fmt.Sprint(key) + " "
+	}
+	result += "\n"
+
+	result += "Keys Down: "
+	for _, key := range p.KeyDown {
+		result += fmt.Sprint(key) + " "
+	}
+	result += "\n"
+
 	for _, row := range p.Grid {
 		for _, cell := range row {
 			if cell {
@@ -98,4 +116,47 @@ func validateDim(row []bool, key []int) bool {
 	}
 
 	return true
+}
+
+func RandomPicross(width, height int) *Picross {
+	p := NewPicross(width, height)
+	// Fill the grid with random true/false values
+	for i := 0; i < height; i++ {
+		for j := 0; j < width; j++ {
+			p.Grid[i][j] = rand.Intn(2) == 1
+		}
+	}
+
+	// Generate keys for the random grid
+	for i := 0; i < height; i++ {
+		p.KeyDown[i] = generateKey(p.Grid[i])
+	}
+	for j := 0; j < width; j++ {
+		column := make([]bool, height)
+		for i := 0; i < height; i++ {
+			column[i] = p.Grid[i][j]
+		}
+		p.KeyAcross[j] = generateKey(column)
+	}
+	return p
+}
+
+func generateKey(row []bool) []int {
+	var key []int
+	count := 0
+	for _, val := range row {
+		if val {
+			count++
+		} else if count > 0 {
+			key = append(key, count)
+			count = 0
+		}
+	}
+	if count > 0 {
+		key = append(key, count)
+	}
+	if len(key) == 0 {
+		key = []int{0}
+	}
+	return key
 }

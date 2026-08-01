@@ -19,8 +19,11 @@ func main() {
 		return
 	}
 
-	fmt.Printf("Loaded Picross puzzle: %dx%d\n", puzzle.Width, puzzle.Height)
-	solver.SolvePicross(puzzle)
+	solver.SolvePicross(puzzle, solver.SolverConfig{
+		GenerationSize:  10,
+		GenerationCount: 100,
+	})
+
 	fmt.Println("Solved Picross puzzle:")
 	fmt.Println(puzzle)
 
