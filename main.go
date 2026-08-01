@@ -13,28 +13,33 @@ import (
 )
 
 func main() {
-	puzzle, err := LoadPicross("puzzle.txt")
-	if err != nil {
-		fmt.Println("Error loading puzzle:", err)
-		return
+	// puzzle, err := LoadPicross("puzzle.txt")
+	// if err != nil {
+	// 	fmt.Println("Error loading puzzle:", err)
+	// 	return
+	// }
+
+	puzzle := picross.RandomPicross(100, 100)
+	if err := WritePicross("puzzleOut.txt", puzzle); err != nil {
+		fmt.Printf("Error writing puzzle to file: %v", err)
 	}
 
-	picross, _ := solver.SolvePicross(puzzle, solver.SolverConfig{
+	fmt.Println("Starting solve...")
+	picross, solved := solver.SolvePicross(puzzle, solver.SolverConfig{
 		GenerationSize:  100,
 		GenerationCount: 10000,
-		MutationRate:    .05,
-		ElitismCount:    2,
-		TournamentSize:  5,
+		MutationRate:    .1,
+		ElitismCount:    3,
+		TournamentSize:  4,
 	})
 
-	fmt.Println("Solved Picross puzzle:")
-	fmt.Println(picross)
-
-	fmt.Println("Validating puzzle...")
-	if puzzle.Validate() {
-		fmt.Println("Puzzle is valid.")
+	if solved {
+		fmt.Println("Solved Picross puzzle:")
+		fmt.Println(picross)
 	} else {
-		fmt.Println("Puzzle is invalid.")
+		fmt.Println("Failed to solve Picross puzzle.")
+		fmt.Println("Best attempt:")
+		fmt.Println(picross)
 	}
 }
 
@@ -102,4 +107,21 @@ func LoadPicross(filename string) (*picross.Picross, error) {
 	p.KeyDown = down
 
 	return p, nil
+}
+
+func WritePicross(filename string, p *picross.Picross) error {
+	f, err := os.Create(filename)
+	if err != nil {
+		return fmt.Errorf("creating file: %w", err)
+	}
+	defer f.Close()
+
+	writer := bufio.NewWriter(f)
+	defer writer.Flush()
+
+	_, err = writer.WriteString(p.String())
+	if err != nil {
+		return fmt.Errorf("writing to file: %w", err)
+	}
+	return nil
 }

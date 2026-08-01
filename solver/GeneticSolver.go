@@ -37,7 +37,7 @@ func SolvePicross(p *picross.Picross, config SolverConfig) (picross.Picross, boo
 		population = createGeneration(population, p, config)
 
 		sorted := sortIndividualsByFitness(population)
-		fmt.Printf("Best %s", &sorted[0])
+		fmt.Printf("Best Fitness %d\n", sorted[0].Fitness)
 
 		if sorted[0].Fitness == 0 {
 			return *sorted[0].Genome, true
