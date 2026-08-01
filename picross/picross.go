@@ -5,12 +5,15 @@ import (
 	"math/rand"
 )
 
+type PicrossGrid = [][]bool
+type PicrossKey = []int
+
 type Picross struct {
 	Width     int
 	Height    int
-	Grid      [][]bool
-	KeyAcross [][]int
-	KeyDown   [][]int
+	Grid      PicrossGrid
+	KeyAcross []PicrossKey
+	KeyDown   []PicrossKey
 }
 
 func NewPicross(width, height int) *Picross {
@@ -25,6 +28,22 @@ func NewPicross(width, height int) *Picross {
 		KeyAcross: make([][]int, width),
 		KeyDown:   make([][]int, height),
 	}
+}
+
+func FromGrid(grid PicrossGrid) *Picross {
+	width := len(grid[0])
+	height := len(grid)
+
+	picross := &Picross{
+		Width:     width,
+		Height:    height,
+		Grid:      grid,
+		KeyAcross: make([][]int, width),
+		KeyDown:   make([][]int, height),
+	}
+
+	generateKeys(picross)
+	return picross
 }
 
 func (p Picross) String() string {

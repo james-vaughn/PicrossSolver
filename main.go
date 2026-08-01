@@ -19,13 +19,16 @@ func main() {
 		return
 	}
 
-	solver.SolvePicross(puzzle, solver.SolverConfig{
-		GenerationSize:  10,
-		GenerationCount: 100,
+	picross, _ := solver.SolvePicross(puzzle, solver.SolverConfig{
+		GenerationSize:  100,
+		GenerationCount: 10000,
+		MutationRate:    .05,
+		ElitismCount:    2,
+		TournamentSize:  5,
 	})
 
 	fmt.Println("Solved Picross puzzle:")
-	fmt.Println(puzzle)
+	fmt.Println(picross)
 
 	fmt.Println("Validating puzzle...")
 	if puzzle.Validate() {

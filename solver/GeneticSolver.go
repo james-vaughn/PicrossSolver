@@ -2,6 +2,7 @@ package solver
 
 import (
 	"fmt"
+	"math/rand"
 	"sort"
 	"sync"
 
@@ -12,6 +13,8 @@ type SolverConfig struct {
 	GenerationSize  int
 	GenerationCount int
 	MutationRate    float64
+	ElitismCount    int
+	TournamentSize  int
 }
 
 type Individual struct {
@@ -19,7 +22,11 @@ type Individual struct {
 	Fitness int
 }
 
-func SolvePicross(p *picross.Picross, config SolverConfig) {
+func (i *Individual) String() string {
+	return fmt.Sprintf("Genome %s\nFitness %d\n", i.Genome.String(), i.Fitness)
+}
+
+func SolvePicross(p *picross.Picross, config SolverConfig) (picross.Picross, bool) {
 	// Implement the genetic algorithm to solve the Picross puzzle
 	// This is a placeholder for the actual implementation
 
@@ -27,11 +34,16 @@ func SolvePicross(p *picross.Picross, config SolverConfig) {
 
 	for gen := 0; gen < config.GenerationCount; gen++ {
 		fmt.Printf("Generation %d\n", gen)
+		population = createGeneration(population, p, config)
+
+		sorted := sortIndividualsByFitness(population)
+		fmt.Printf("Best %s", &sorted[0])
+
+		if sorted[0].Fitness == 0 {
+			return *sorted[0].Genome, true
+		}
 	}
-	sorted := sortIndividualsByFitness(population)
-	for _, puzzle := range sorted {
-		fmt.Println(puzzle.Fitness, puzzle.Genome)
-	}
+	return *sortIndividualsByFitness(population)[0].Genome, false
 }
 
 func Score(candidate *picross.Picross, solution *picross.Picross) int {
@@ -100,7 +112,7 @@ func sortIndividualsByFitness(individuals []Individual) []Individual {
 }
 
 func createInitialPopulation(p *picross.Picross, size int) []Individual {
-	parents := make([]Individual, size)
+	parents := make([]Individual, 0, size)
 
 	wg := sync.WaitGroup{}
 	ch := make(chan Individual, size)
@@ -113,8 +125,81 @@ func createInitialPopulation(p *picross.Picross, size int) []Individual {
 	}
 	wg.Wait()
 	close(ch)
-	for i := 0; i < size; i++ {
-		parents[i] = <-ch
+
+	for indiv := range ch {
+		parents = append(parents, indiv)
 	}
 	return parents
+}
+
+func createGeneration(prevGen []Individual, solution *picross.Picross, config SolverConfig) []Individual {
+	genSize := len(prevGen)
+	sorted := sortIndividualsByFitness(prevGen)
+
+	nextGen := make([]Individual, 0, genSize)
+	elitismCount := config.ElitismCount
+	nextGen = append(nextGen, sorted[:elitismCount]...) // carry over best unchanged
+
+	wg := sync.WaitGroup{}
+	ch := make(chan Individual, genSize-elitismCount)
+
+	for range genSize - elitismCount {
+		wg.Go(func() {
+			parent1 := tournamentSelect(prevGen, config.TournamentSize)
+			parent2 := tournamentSelect(prevGen, config.TournamentSize)
+			ch <- crossOver(parent1, parent2, solution, config.MutationRate)
+		})
+	}
+	wg.Wait()
+	close(ch)
+
+	for indiv := range ch {
+		nextGen = append(nextGen, indiv)
+	}
+	return nextGen
+}
+
+func tournamentSelect(generation []Individual, tournamentSize int) Individual {
+	var chosen Individual
+
+	for i := 0; i < tournamentSize; i++ {
+		competitor := generation[rand.Intn(len(generation))]
+		if i == 0 || competitor.Fitness < chosen.Fitness {
+			chosen = competitor
+		}
+	}
+	return chosen
+}
+
+func crossOver(p1, p2 Individual, solution *picross.Picross, mutationRate float64) Individual {
+	crossOverGrid := make(picross.PicrossGrid, len(p1.Genome.Grid))
+	for i, row := range p1.Genome.Grid {
+		crossOverGrid[i] = append([]bool(nil), row...)
+	}
+
+	for row := 0; row < len(crossOverGrid); row++ {
+		for col := 0; col < len(crossOverGrid[0]); col++ {
+			if rand.Float64() < 0.5 {
+				crossOverGrid[row][col] = p2.Genome.Grid[row][col]
+			}
+		}
+	}
+	mutate(&crossOverGrid, mutationRate)
+
+	child := picross.FromGrid(crossOverGrid)
+	return Individual{
+		Genome:  child,
+		Fitness: Score(child, solution),
+	}
+}
+
+func mutate(grid *picross.PicrossGrid, mutationRate float64) {
+	for row := 0; row < len(*grid); row++ {
+		for col := 0; col < len((*grid)[0]); col++ {
+			if rand.Float64() < mutationRate {
+				(*grid)[row][col] = !(*grid)[row][col]
+			}
+		}
+	}
+
 }
