@@ -1,6 +1,6 @@
 package solver
 
-import "github.com/jamesvaughn/PicrossSolver/picross"
+import "github.com/james-vaughn/PicrossSolver/picross"
 
 func SolvePicross(p *picross.Picross) {
 	// Implement the genetic algorithm to solve the Picross puzzle
@@ -12,4 +12,11 @@ func SolvePicross(p *picross.Picross) {
 	// Crossover
 	// Mutate
 	// Repeat until solution is found or max generations reached
+	p.Grid = [][]bool{
+		{true, true, false, true},
+		{false, false, false, true},
+		{true, true, false, true},
+		{true, true, false, true},
+	}
+
 }

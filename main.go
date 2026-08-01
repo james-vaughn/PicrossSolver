@@ -3,24 +3,97 @@ package main
 import (
 	"bufio"
 	"fmt"
-	"log"
 	"os"
+	"regexp"
+	"strconv"
+	"strings"
+
+	"github.com/james-vaughn/PicrossSolver/picross"
+	"github.com/james-vaughn/PicrossSolver/solver"
 )
 
 func main() {
-	file, err := os.Open("/path/to/file.txt")
+	puzzle, err := LoadPicross("puzzle.txt")
 	if err != nil {
-		log.Fatal(err)
+		fmt.Println("Error loading puzzle:", err)
+		return
 	}
-	defer file.Close()
 
-	scanner := bufio.NewScanner(file)
-	// optionally, resize scanner's capacity for lines over 64K, see next example
+	fmt.Printf("Loaded Picross puzzle: %dx%d\n", puzzle.Width, puzzle.Height)
+	solver.SolvePicross(puzzle)
+	fmt.Println("Solved Picross puzzle:")
+	fmt.Println(puzzle)
+
+	fmt.Println("Validating puzzle...")
+	if puzzle.Validate() {
+		fmt.Println("Puzzle is valid.")
+	} else {
+		fmt.Println("Puzzle is invalid.")
+	}
+}
+
+var groupRe = regexp.MustCompile(`\[([^\]]*)\]`)
+
+// parseLine turns something like "[1, 2], [1, 2], [0], [4]" into
+// [][]int{{1,2}, {1,2}, {0}, {4}}
+func parseLine(line string) [][]int {
+	matches := groupRe.FindAllStringSubmatch(line, -1)
+	result := make([][]int, len(matches))
+
+	for i, m := range matches {
+		parts := strings.Split(m[1], ",")
+		nums := make([]int, 0, len(parts))
+		for _, p := range parts {
+			p = strings.TrimSpace(p)
+			if p == "" {
+				continue
+			}
+			n, err := strconv.Atoi(p)
+			if err != nil {
+				continue // or return an error if you want strict parsing
+			}
+			nums = append(nums, n)
+		}
+		result[i] = nums
+	}
+
+	return result
+}
+
+// LoadPicross reads a file where line 1 is the "across" keys and
+// line 2 is the "down" keys, and builds a Picross from it.
+func LoadPicross(filename string) (*picross.Picross, error) {
+	f, err := os.Open(filename)
+	if err != nil {
+		return nil, fmt.Errorf("opening file: %w", err)
+	}
+	defer f.Close()
+
+	scanner := bufio.NewScanner(f)
+	var lines []string
 	for scanner.Scan() {
-		fmt.Println(scanner.Text())
+		line := strings.TrimSpace(scanner.Text())
+		if line == "" {
+			continue
+		}
+		lines = append(lines, line)
+	}
+	if err := scanner.Err(); err != nil {
+		return nil, fmt.Errorf("reading file: %w", err)
+	}
+	if len(lines) < 2 {
+		return nil, fmt.Errorf("expected 2 lines, got %d", len(lines))
 	}
 
-	if err := scanner.Err(); err != nil {
-		log.Fatal(err)
-	}
+	across := parseLine(lines[0])
+	down := parseLine(lines[1])
+
+	width := len(across)
+	height := len(down)
+
+	p := picross.NewPicross(width, height)
+	p.KeyAcross = across
+	p.KeyDown = down
+
+	return p, nil
 }
