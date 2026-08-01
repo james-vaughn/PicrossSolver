@@ -68,18 +68,32 @@ func (p *Picross) Validate() bool {
 }
 
 func validateDim(row []bool, key []int) bool {
-	currentKey := key[0]
+	var groups []int
 	count := 0
 
 	for _, val := range row {
 		if val {
 			count++
-		} else {
-			if count != currentKey {
-				return false
-			}
-
+		} else if count > 0 {
+			groups = append(groups, count)
 			count = 0
+		}
+	}
+	if count > 0 {
+		groups = append(groups, count)
+	}
+
+	// A key of [0] means "no filled cells expected"
+	if len(key) == 1 && key[0] == 0 {
+		return len(groups) == 0
+	}
+
+	if len(groups) != len(key) {
+		return false
+	}
+	for i, g := range groups {
+		if g != key[i] {
+			return false
 		}
 	}
 
