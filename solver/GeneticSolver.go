@@ -213,17 +213,15 @@ func tournamentSelect(generation []Individual, tournamentSize int) Individual {
 }
 
 func crossOver(p1, p2 Individual, solution *picross.Picross, mutationRate float64) Individual {
+	width := len(p1.Genome.Grid[0])
 	crossOverGrid := make(picross.PicrossGrid, len(p1.Genome.Grid))
-	for i, row := range p1.Genome.Grid {
-		crossOverGrid[i] = append([]bool(nil), row...)
-	}
-
-	for row := 0; row < len(crossOverGrid); row++ {
-		for col := 0; col < len(crossOverGrid[0]); col++ {
-			if rand.Float64() < 0.5 {
-				crossOverGrid[row][col] = p2.Genome.Grid[row][col]
-			}
+	for row := 0; row < len(p1.Genome.Grid); row++ {
+		source := p1.Genome.Grid
+		if rand.Float64() < 0.5 {
+			source = p2.Genome.Grid
 		}
+		crossOverGrid[row] = make([]bool, width)
+		copy(crossOverGrid[row], source[row])
 	}
 	mutate(&crossOverGrid, mutationRate)
 
