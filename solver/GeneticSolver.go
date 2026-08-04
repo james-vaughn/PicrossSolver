@@ -31,14 +31,15 @@ func SolvePicross(p *picross.Picross, config SolverConfig) (picross.Picross, boo
 	// This is a placeholder for the actual implementation
 
 	population := createInitialPopulation(p, config.GenerationSize)
-
+	mutationRate := config.MutationRate
 	for gen := 0; gen < config.GenerationCount; gen++ {
 		fmt.Printf("Generation %d\n", gen)
-		population = createGeneration(population, p, config)
+		population = createGeneration(population, p, config, mutationRate)
 
 		sorted := sortIndividualsByFitness(population)
-		fmt.Printf("Best Fitness %d\n", sorted[0].Fitness)
+		fmt.Printf("Best Fitness %d\nMutation Rate %f\n", sorted[0].Fitness, mutationRate)
 
+		mutationRate = adaptiveMutationRate(config.MutationRate, sorted[0].Fitness, len(p.Grid)*len(p.Grid[0])/2)
 		if sorted[0].Fitness == 0 {
 			return *sorted[0].Genome, true
 		}
@@ -49,59 +50,99 @@ func SolvePicross(p *picross.Picross, config SolverConfig) (picross.Picross, boo
 func Score(candidate *picross.Picross, solution *picross.Picross) int {
 	score := 0
 
-	if len(candidate.KeyDown) != len(solution.KeyDown) {
-		// mismatched dimensions; treat as fully wrong
+	if candidate.Height != len(solution.KeyDown) {
 		score += len(solution.KeyDown)
 	} else {
 		for i := range solution.KeyDown {
-			score += scoreKeys(candidate.KeyDown[i], solution.KeyDown[i])
+			score += lineDistance(candidate.Grid[i], solution.KeyDown[i])
 		}
 	}
 
-	if len(candidate.KeyAcross) != len(solution.KeyAcross) {
+	if candidate.Width != len(solution.KeyAcross) {
 		score += len(solution.KeyAcross)
 	} else {
 		for j := range solution.KeyAcross {
-			score += scoreKeys(candidate.KeyAcross[j], solution.KeyAcross[j])
+			column := make([]bool, candidate.Height)
+			for i := 0; i < candidate.Height; i++ {
+				column[i] = candidate.Grid[i][j]
+			}
+			score += lineDistance(column, solution.KeyAcross[j])
 		}
 	}
 
 	return score
 }
 
-// scoreDim returns the number of key values that don't match the
-// actual groups of true values in the row/column.
-func scoreKeys(candidate, solution []int) int {
-	// normalize [0] to mean "no groups"
-	normalize := func(k []int) []int {
-		if len(k) == 1 && k[0] == 0 {
-			return nil
-		}
-		return k
+// lineDistance returns the minimum number of cell flips needed to turn
+// `row` into some row that exactly satisfies `key`.
+func lineDistance(row []bool, key []int) int {
+	groups := key
+	if len(key) == 1 && key[0] == 0 {
+		groups = nil
 	}
-	candidate = normalize(candidate)
-	solution = normalize(solution)
+	n := len(row)
+	m := len(groups)
 
-	maxLen := len(candidate)
-	if len(solution) > maxLen {
-		maxLen = len(solution)
+	// prefix[i] = cost of making cells [0,i) filled, relative to `row`
+	prefix := make([]int, n+1)
+	for i := 0; i < n; i++ {
+		c := 0
+		if !row[i] {
+			c = 1
+		}
+		prefix[i+1] = prefix[i] + c
 	}
-
-	mismatches := 0
-	for i := 0; i < maxLen; i++ {
-		c, s := -1, -1
-		if i < len(candidate) {
-			c = candidate[i]
+	filledCost := func(start, length int) int {
+		return prefix[start+length] - prefix[start]
+	}
+	emptyCost := func(i int) int {
+		if row[i] {
+			return 1
 		}
-		if i < len(solution) {
-			s = solution[i]
-		}
-		if c != s {
-			mismatches++
-		}
+		return 0
 	}
 
-	return mismatches
+	const inf = 1 << 30
+	// dp[pos][j][s]: min cost using first `pos` cells, `j` groups placed,
+	// s=0 free to start next group, s=1 just finished a group (needs a gap)
+	dp := make([][][2]int, n+1)
+	for i := range dp {
+		dp[i] = make([][2]int, m+1)
+		for j := range dp[i] {
+			dp[i][j][0], dp[i][j][1] = inf, inf
+		}
+	}
+	dp[0][0][0] = 0
+
+	for i := 0; i < n; i++ {
+		for j := 0; j <= m; j++ {
+			for s := 0; s < 2; s++ {
+				cur := dp[i][j][s]
+				if cur == inf {
+					continue
+				}
+				// place an empty cell here
+				if cost := cur + emptyCost(i); cost < dp[i+1][j][0] {
+					dp[i+1][j][0] = cost
+				}
+				// start the next group here (only if free to, i.e. s==0)
+				if s == 0 && j < m {
+					k := groups[j]
+					if i+k <= n {
+						if cost := cur + filledCost(i, k); cost < dp[i+k][j+1][1] {
+							dp[i+k][j+1][1] = cost
+						}
+					}
+				}
+			}
+		}
+	}
+
+	best := dp[n][m][0]
+	if dp[n][m][1] < best {
+		best = dp[n][m][1]
+	}
+	return best
 }
 
 func sortIndividualsByFitness(individuals []Individual) []Individual {
@@ -132,7 +173,7 @@ func createInitialPopulation(p *picross.Picross, size int) []Individual {
 	return parents
 }
 
-func createGeneration(prevGen []Individual, solution *picross.Picross, config SolverConfig) []Individual {
+func createGeneration(prevGen []Individual, solution *picross.Picross, config SolverConfig, mutationRate float64) []Individual {
 	genSize := len(prevGen)
 	sorted := sortIndividualsByFitness(prevGen)
 
@@ -147,7 +188,7 @@ func createGeneration(prevGen []Individual, solution *picross.Picross, config So
 		wg.Go(func() {
 			parent1 := tournamentSelect(prevGen, config.TournamentSize)
 			parent2 := tournamentSelect(prevGen, config.TournamentSize)
-			ch <- crossOver(parent1, parent2, solution, config.MutationRate)
+			ch <- crossOver(parent1, parent2, solution, mutationRate)
 		})
 	}
 	wg.Wait()
@@ -202,4 +243,16 @@ func mutate(grid *picross.PicrossGrid, mutationRate float64) {
 		}
 	}
 
+}
+
+// reduce mutation rate as the best fitness approaches zero, to avoid overshooting the solution
+func adaptiveMutationRate(baseRate float64, bestFitness int, worstCaseFitness int) float64 {
+	progress := 1.0 - float64(bestFitness)/float64(worstCaseFitness)
+	if progress < 0 {
+		progress = 0
+	}
+	if progress > 1 {
+		progress = 1
+	}
+	return baseRate * (1.0 - 0.9*progress)
 }

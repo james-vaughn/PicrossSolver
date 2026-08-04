@@ -19,18 +19,18 @@ func main() {
 	// 	return
 	// }
 
-	puzzle := picross.RandomPicross(100, 100)
+	puzzle := picross.RandomPicross(15, 15)
 	if err := WritePicross("puzzleOut.txt", puzzle); err != nil {
 		fmt.Printf("Error writing puzzle to file: %v", err)
 	}
 
 	fmt.Println("Starting solve...")
 	picross, solved := solver.SolvePicross(puzzle, solver.SolverConfig{
-		GenerationSize:  100,
-		GenerationCount: 10000,
-		MutationRate:    .1,
-		ElitismCount:    3,
-		TournamentSize:  4,
+		GenerationSize:  200,
+		GenerationCount: 20000,
+		MutationRate:    .075,
+		ElitismCount:    4,
+		TournamentSize:  3,
 	})
 
 	if solved {
