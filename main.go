@@ -14,15 +14,15 @@ import (
 )
 
 func main() {
-	inputFile := flag.String("input", "", "path to puzzle input file (if empty, a random puzzle is generated)")
-	width := flag.Int("width", 15, "width of the randomly generated puzzle (ignored if -input is set)")
-	height := flag.Int("height", 15, "height of the randomly generated puzzle (ignored if -input is set)")
+	inputFile := flag.String("i", "", "path to puzzle input file (if empty, a random puzzle is generated)")
+	width := flag.Int("w", 15, "width of the randomly generated puzzle (ignored if -input is set)")
+	height := flag.Int("h", 15, "height of the randomly generated puzzle (ignored if -input is set)")
 
-	popSize := flag.Int("popSize", 200, "population size per generation")
-	generations := flag.Int("generations", 50000, "max number of generations to run")
-	mutationRate := flag.Float64("mutationRate", .08, "base mutation rate")
-	elitism := flag.Int("elitism", 4, "number of top individuals carried over unchanged each generation")
-	tournamentSize := flag.Int("tournamentSize", 3, "number of individuals competing in each tournament selection")
+	popSize := flag.Int("p", 200, "population size per generation")
+	generations := flag.Int("g", 50000, "max number of generations to run")
+	mutationRate := flag.Float64("m", .08, "base mutation rate")
+	elitism := flag.Int("e", 4, "number of top individuals carried over unchanged each generation")
+	tournamentSize := flag.Int("t", 3, "number of individuals competing in each tournament selection")
 
 	output := flag.String("output", "", "optional path to write the final puzzle result to")
 
