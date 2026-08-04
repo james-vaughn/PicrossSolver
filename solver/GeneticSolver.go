@@ -35,7 +35,8 @@ func SolvePicross(p *picross.Picross, config SolverConfig) (picross.Picross, boo
 		population = createGeneration(population, p, config, mutationRate)
 
 		sorted := sortIndividualsByFitness(population)
-		fmt.Printf("Best Fitness %d\nMutation Rate %f\n", sorted[0].Fitness, mutationRate)
+		averageFitness := averageFitness(sorted)
+		fmt.Printf("Best Fitness %d, Average Fitness %.2f\nMutation Rate %f\n", sorted[0].Fitness, averageFitness, mutationRate)
 
 		mutationRate = adaptiveMutationRate(config.MutationRate, sorted[0].Fitness, len(p.Grid)*len(p.Grid[0])/2)
 		if sorted[0].Fitness == 0 {
@@ -150,6 +151,17 @@ func sortIndividualsByFitness(individuals []Individual) []Individual {
 		return individuals[i].Fitness < individuals[j].Fitness
 	})
 	return individuals
+}
+
+func averageFitness(individuals []Individual) float64 {
+	if len(individuals) == 0 {
+		return 0
+	}
+	sum := 0
+	for _, ind := range individuals {
+		sum += ind.Fitness
+	}
+	return float64(sum) / float64(len(individuals))
 }
 
 // seed the initial parents with random genomes
