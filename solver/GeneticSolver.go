@@ -26,10 +26,8 @@ func (i *Individual) String() string {
 	return fmt.Sprintf("Genome %s\nFitness %d\n", i.Genome.String(), i.Fitness)
 }
 
+// Genetic algorithm to solve a Picross puzzle. Returns the best solution found and whether it is a perfect solution.
 func SolvePicross(p *picross.Picross, config SolverConfig) (picross.Picross, bool) {
-	// Implement the genetic algorithm to solve the Picross puzzle
-	// This is a placeholder for the actual implementation
-
 	population := createInitialPopulation(p, config.GenerationSize)
 	mutationRate := config.MutationRate
 	for gen := 0; gen < config.GenerationCount; gen++ {
@@ -47,6 +45,8 @@ func SolvePicross(p *picross.Picross, config SolverConfig) (picross.Picross, boo
 	return *sortIndividualsByFitness(population)[0].Genome, false
 }
 
+// Score calculates the fitness of a candidate solution compared to the actual solution.
+// A lower score indicates a better match, with 0 being a perfect solution.
 func Score(candidate *picross.Picross, solution *picross.Picross) int {
 	score := 0
 
@@ -152,6 +152,7 @@ func sortIndividualsByFitness(individuals []Individual) []Individual {
 	return individuals
 }
 
+// seed the initial parents with random genomes
 func createInitialPopulation(p *picross.Picross, size int) []Individual {
 	parents := make([]Individual, 0, size)
 
@@ -173,6 +174,7 @@ func createInitialPopulation(p *picross.Picross, size int) []Individual {
 	return parents
 }
 
+// generates the next generation of individuals from the previous generation
 func createGeneration(prevGen []Individual, solution *picross.Picross, config SolverConfig, mutationRate float64) []Individual {
 	genSize := len(prevGen)
 	sorted := sortIndividualsByFitness(prevGen)
@@ -200,6 +202,8 @@ func createGeneration(prevGen []Individual, solution *picross.Picross, config So
 	return nextGen
 }
 
+// chooses the best individual from a random sample of the population
+// in order to select parents for crossover
 func tournamentSelect(generation []Individual, tournamentSize int) Individual {
 	var chosen Individual
 
@@ -212,6 +216,8 @@ func tournamentSelect(generation []Individual, tournamentSize int) Individual {
 	return chosen
 }
 
+// copies rows randomly from p1 or p2
+// then mutates the resulting child genome
 func crossOver(p1, p2 Individual, solution *picross.Picross, mutationRate float64) Individual {
 	width := len(p1.Genome.Grid[0])
 	crossOverGrid := make(picross.PicrossGrid, len(p1.Genome.Grid))
@@ -232,6 +238,7 @@ func crossOver(p1, p2 Individual, solution *picross.Picross, mutationRate float6
 	}
 }
 
+// flips cells randomly based on the mutation rate
 func mutate(grid *picross.PicrossGrid, mutationRate float64) {
 	for row := 0; row < len(*grid); row++ {
 		for col := 0; col < len((*grid)[0]); col++ {
