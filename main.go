@@ -13,16 +13,16 @@ import (
 )
 
 func main() {
-	// puzzle, err := LoadPicross("puzzle.txt")
-	// if err != nil {
-	// 	fmt.Println("Error loading puzzle:", err)
-	// 	return
-	// }
-
-	puzzle := picross.RandomPicross(15, 15)
-	if err := WritePicross("puzzleOut.txt", puzzle); err != nil {
-		fmt.Printf("Error writing puzzle to file: %v", err)
+	puzzle, err := LoadPicross("puzzle.txt")
+	if err != nil {
+		fmt.Println("Error loading puzzle:", err)
+		return
 	}
+
+	// puzzle := picross.RandomPicross(15, 15)
+	// if err := WritePicross("puzzleOut.txt", puzzle); err != nil {
+	// 	fmt.Printf("Error writing puzzle to file: %v", err)
+	// }
 
 	fmt.Println("Starting solve...")
 	picross, solved := solver.SolvePicross(puzzle, solver.SolverConfig{
