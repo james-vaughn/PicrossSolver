@@ -2,6 +2,7 @@ package main
 
 import (
 	"bufio"
+	"flag"
 	"fmt"
 	"os"
 	"regexp"
@@ -13,33 +14,56 @@ import (
 )
 
 func main() {
-	puzzle, err := LoadPicross("puzzle.txt")
-	if err != nil {
-		fmt.Println("Error loading puzzle:", err)
-		return
+	inputFile := flag.String("input", "", "path to puzzle input file (if empty, a random puzzle is generated)")
+	width := flag.Int("width", 15, "width of the randomly generated puzzle (ignored if -input is set)")
+	height := flag.Int("height", 15, "height of the randomly generated puzzle (ignored if -input is set)")
+
+	popSize := flag.Int("popSize", 200, "population size per generation")
+	generations := flag.Int("generations", 50000, "max number of generations to run")
+	mutationRate := flag.Float64("mutationRate", .08, "base mutation rate")
+	elitism := flag.Int("elitism", 4, "number of top individuals carried over unchanged each generation")
+	tournamentSize := flag.Int("tournamentSize", 3, "number of individuals competing in each tournament selection")
+
+	output := flag.String("output", "", "optional path to write the final puzzle result to")
+
+	flag.Parse()
+
+	var puzzle *picross.Picross
+	var err error
+
+	if *inputFile != "" {
+		puzzle, err = LoadPicross(*inputFile)
+		if err != nil {
+			fmt.Println("Error loading puzzle:", err)
+			return
+		}
+	} else {
+		fmt.Printf("No input file specified, generating random %dx%d puzzle...\n", *width, *height)
+		puzzle = picross.RandomPicross(*width, *height)
 	}
 
-	// puzzle := picross.RandomPicross(15, 15)
-	// if err := WritePicross("puzzleOut.txt", puzzle); err != nil {
-	// 	fmt.Printf("Error writing puzzle to file: %v", err)
-	// }
-
 	fmt.Println("Starting solve...")
-	picross, solved := solver.SolvePicross(puzzle, solver.SolverConfig{
-		GenerationSize:  200,
-		GenerationCount: 50000,
-		MutationRate:    .075,
-		ElitismCount:    4,
-		TournamentSize:  3,
+	result, solved := solver.SolvePicross(puzzle, solver.SolverConfig{
+		GenerationSize:  *popSize,
+		GenerationCount: *generations,
+		MutationRate:    *mutationRate,
+		ElitismCount:    *elitism,
+		TournamentSize:  *tournamentSize,
 	})
 
 	if solved {
 		fmt.Println("Solved Picross puzzle:")
-		fmt.Println(picross)
+		fmt.Println(result)
 	} else {
 		fmt.Println("Failed to solve Picross puzzle.")
 		fmt.Println("Best attempt:")
-		fmt.Println(picross)
+		fmt.Println(result)
+	}
+
+	if *output != "" {
+		if err := WritePicross(*output, &result); err != nil {
+			fmt.Println("Error writing output:", err)
+		}
 	}
 }
 
