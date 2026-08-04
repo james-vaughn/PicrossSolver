@@ -27,7 +27,7 @@ func main() {
 	fmt.Println("Starting solve...")
 	picross, solved := solver.SolvePicross(puzzle, solver.SolverConfig{
 		GenerationSize:  200,
-		GenerationCount: 20000,
+		GenerationCount: 50000,
 		MutationRate:    .075,
 		ElitismCount:    4,
 		TournamentSize:  3,
